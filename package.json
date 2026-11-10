@@ -1,0 +1,64 @@
+{
+    "name": "@luna-park/plugin-reactivity",
+    "version": "1.0.0",
+    "private": false,
+    "description": "Reactivity plugin for Luna Park: browser, sensor, time and state nodes powered by VueUse.",
+    "keywords": [
+        "luna-park",
+        "plugin",
+        "reactivity",
+        "vueuse"
+    ],
+    "homepage": "https://luna-park.app",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/lunapark/plugin-reactivity"
+    },
+    "author": {
+        "name": "Luna Park",
+        "url": "https://luna-park.app"
+    },
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js"
+        },
+        "./runtime": {
+            "import": "./dist/runtime.js"
+        }
+    },
+    "module": "./dist/index.js",
+    "files": [
+        "dist/**",
+        "src/logo.svg"
+    ],
+    "scripts": {
+        "build": "vite build && vite build --mode runtime",
+        "dev": "vite build --watch",
+        "preview": "luna-preview",
+        "typecheck": "vue-tsc -b",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
+    },
+    "dependencies": {
+        "@vueuse/core": "^15.0.0",
+        "vue": "^3.5.45"
+    },
+    "devDependencies": {
+        "@fortawesome/pro-solid-svg-icons": "link:..\\..\\@fortawesome\\pro-solid-svg-icons",
+        "@luna-park/eslint-config": "^1.4.5",
+        "@luna-park/plugin": "^2.2.0",
+        "@types/node": "^26.6.6",
+        "@vue/tsconfig": "^0.9.1",
+        "eslint": "^10.14.0",
+        "globals": "^17.14.0",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.72.2",
+        "vite": "^8.3.7",
+        "vue-tsc": "^3.3.14"
+    },
+    "peerDependencies": {
+        "@vueuse/core": "^15.0.0",
+        "vue": "^3.5.43"
+    }
+}
