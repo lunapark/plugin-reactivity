@@ -1,8 +1,9 @@
-import { faArrowPointer, faArrowsUpDown, faBed, faComputerMouse, faKeyboard, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-solid-svg-icons";
+import { faArrowPointer, faArrowsUpDown, faArrowsUpDownLeftRight, faBed, faComputerMouse, faKeyboard, faUpRightAndDownLeftFromCenter } from "@fortawesome/pro-solid-svg-icons";
 import { ELogicScope, LogicType, makeLogicNode } from "@luna-park/plugin";
 import { useIdle, useMagicKeys, useMousePressed, usePointer, useWindowScroll, useWindowSize } from "@vueuse/core";
 
-import { instanceDefine, instanceImport, outputProperty, vueuseImport } from "@/nodes/lib";
+import { instanceDefine, instanceImport, outputProperty, runtimeImport, vueuseImport } from "@/nodes/lib";
+import { useDrag } from "@/runtime";
 
 export const sensorNodes = [
     makeLogicNode({
@@ -149,6 +150,60 @@ export const sensorNodes = [
                 return `()=>{return [[instance]]([], () => usePointer(), ${ JSON.stringify(id) }).${ outputProperty(key!) }.value${ fallback };}`;
             },
             imports: [vueuseImport("usePointer"), instanceImport]
+        }
+    }),
+    makeLogicNode({
+        name: "sensors/drag",
+        inputs: {
+            in_exec: LogicType.exec({ name: "Start" }),
+            in_event: LogicType.object({}, { name: "Event", description: "The `pointerdown` or `mousedown` event that starts the drag" })
+        },
+        outputs: {
+            out_exec: LogicType.exec(),
+            out_isDragging: LogicType.boolean({ name: "Is Dragging" }),
+            out_x: LogicType.number({ name: "X", description: "Horizontal offset in pixels" }),
+            out_y: LogicType.number({ name: "Y", description: "Vertical offset in pixels" })
+        },
+        methods: {
+            in_exec() {
+                this.instance([], () => useDrag()).start(this.in_event as { clientX: number; clientY: number; });
+                return this.out_exec();
+            },
+            out_isDragging() {
+                return this.instance([], () => useDrag()).isDragging.value;
+            },
+            out_x() {
+                return this.instance([], () => useDrag()).x.value;
+            },
+            out_y() {
+                return this.instance([], () => useDrag()).y.value;
+            }
+        },
+        display: {
+            name: "Use Drag",
+            altSearch: "draggable move window title bar pointer drag and drop",
+            config: {
+                icon: faArrowsUpDownLeftRight,
+                scope: ELogicScope.Frontend
+            }
+        },
+        documentation: {
+            short: "Move an element by dragging it",
+            description: "Starts a drag from a `pointerdown` event (link the event node's exec and event to `Start` and `Event`), follows the pointer anywhere on the page until it is released, and returns the total offset in pixels. Each new drag continues from the last offset.",
+            llm: "Link `event/pointerdown(<handle id>)` to `Start` and its `out_event` to `Event`. Put the event on the handle (e.g. a title bar). Set two computed values from `out_x` and `out_y` and bind them on the element to move: `:style.transform=\"'translate(' + dragX + 'px, ' + dragY + 'px)'\"`."
+        },
+        build: {
+            define: instanceDefine,
+            generate: ({ id, key }) => {
+                const drag = `[[instance]]([], () => useDrag(), ${ JSON.stringify(id) })`;
+
+                if (key === "in_exec") {
+                    return `function(){${ drag }.start(this.in_event); return this.out_exec();}`;
+                }
+
+                return `()=>{return ${ drag }.${ outputProperty(key!) }.value;}`;
+            },
+            imports: [runtimeImport("useDrag"), instanceImport]
         }
     }),
     makeLogicNode({
