@@ -3,7 +3,7 @@ import { ELogicScope, LogicType, makeLogicNode } from "@luna-park/plugin";
 import { useIdle, useMagicKeys, useMousePressed, usePointer, useWindowScroll, useWindowSize } from "@vueuse/core";
 
 import { instanceDefine, instanceImport, outputProperty, runtimeImport, vueuseImport } from "@/nodes/lib";
-import { useDrag } from "@/runtime";
+import { startDrag } from "@/runtime";
 
 export const sensorNodes = [
     makeLogicNode({
@@ -160,27 +160,37 @@ export const sensorNodes = [
         },
         outputs: {
             out_exec: LogicType.exec(),
-            out_isDragging: LogicType.boolean({ name: "Is Dragging" }),
+            out_move: LogicType.exec({ name: "On Move", description: "Runs each time the pointer moves, after `X` and `Y` are updated" }),
+            out_end: LogicType.exec({ name: "On Release", description: "Runs once when the pointer is released" }),
             out_x: LogicType.number({ name: "X", description: "Horizontal offset in pixels" }),
             out_y: LogicType.number({ name: "Y", description: "Vertical offset in pixels" })
         },
         methods: {
             in_exec() {
-                this.instance([], () => useDrag()).start(this.in_event as { clientX: number; clientY: number; });
+                (this.internal_stop as (() => void) | undefined)?.();
+
+                this.internal_stop = startDrag(
+                    this.in_event as { clientX: number; clientY: number; },
+                    (this.internal_x as number | undefined) ?? 0,
+                    (this.internal_y as number | undefined) ?? 0,
+                    (x, y) => {
+                        this.internal_x = x;
+                        this.internal_y = y;
+                        this.out_x = x;
+                        this.out_y = y;
+                        return this.out_move();
+                    },
+                    () => {
+                        this.internal_stop = undefined;
+                        return this.out_end();
+                    }
+                );
+
                 return this.out_exec();
-            },
-            out_isDragging() {
-                return this.instance([], () => useDrag()).isDragging.value;
-            },
-            out_x() {
-                return this.instance([], () => useDrag()).x.value;
-            },
-            out_y() {
-                return this.instance([], () => useDrag()).y.value;
             }
         },
         display: {
-            name: "Use Drag",
+            name: "Drag",
             altSearch: "draggable move window title bar pointer drag and drop",
             config: {
                 icon: faArrowsUpDownLeftRight,
@@ -189,21 +199,12 @@ export const sensorNodes = [
         },
         documentation: {
             short: "Move an element by dragging it",
-            description: "Starts a drag from a `pointerdown` event (link the event node's exec and event to `Start` and `Event`), follows the pointer anywhere on the page until it is released, and returns the total offset in pixels. Each new drag continues from the last offset.",
-            llm: "Link `event/pointerdown(<handle id>)` to `Start` and its `out_event` to `Event`. Put the event on the handle (e.g. a title bar). Set two computed values from `out_x` and `out_y` and bind them on the element to move: `:style.transform=\"'translate(' + dragX + 'px, ' + dragY + 'px)'\"`."
+            description: "Starts a drag from a `pointerdown` event (link the event node's exec and event to `Start` and `Event`) and follows the pointer anywhere on the page until it is released. `On Move` runs on every move with the total offset in pixels in `X` and `Y`; `On Release` runs when the pointer is released. Each new drag continues from the last offset.",
+            llm: "Link `event/pointerdown(<handle id>)` to `Start` and its `out_event` to `Event`. Put the event on the handle (e.g. a title bar). From `out_move`, set two variables from `out_x` and `out_y`, and bind them on the element to move: `:style.transform=\"'translate(' + dragX + 'px, ' + dragY + 'px)'\"`. `out_end` runs on release."
         },
         build: {
-            define: instanceDefine,
-            generate: ({ id, key }) => {
-                const drag = `[[instance]]([], () => useDrag(), ${ JSON.stringify(id) })`;
-
-                if (key === "in_exec") {
-                    return `function(){${ drag }.start(this.in_event); return this.out_exec();}`;
-                }
-
-                return `()=>{return ${ drag }.${ outputProperty(key!) }.value;}`;
-            },
-            imports: [runtimeImport("useDrag"), instanceImport]
+            generate: () => "function(){this.internal_stop?.(); this.internal_stop = startDrag(this.in_event, this.internal_x ?? 0, this.internal_y ?? 0, (x, y) => { this.internal_x = x; this.internal_y = y; this.out_x = x; this.out_y = y; return this.out_move(); }, () => { this.internal_stop = undefined; return this.out_end(); }); return this.out_exec();}",
+            imports: [runtimeImport("startDrag")]
         }
     }),
     makeLogicNode({

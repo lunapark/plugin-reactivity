@@ -1,44 +1,33 @@
-import { useEventListener } from "@vueuse/core";
-import { onScopeDispose, ref } from "vue";
-
 type TDragStart = {
     clientX: number;
     clientY: number;
     preventDefault?: () => void;
 };
 
-export function useDrag() {
-    const x = ref(0);
-    const y = ref(0);
-    const isDragging = ref(false);
-    let stop: (() => void) | undefined;
+export function startDrag(event: TDragStart, fromX: number, fromY: number, onMove: (x: number, y: number) => unknown, onEnd: () => unknown) {
+    event.preventDefault?.();
 
-    function start(event: TDragStart) {
-        stop?.();
-        event.preventDefault?.();
+    const originX = event.clientX - fromX;
+    const originY = event.clientY - fromY;
 
-        const originX = event.clientX - x.value;
-        const originY = event.clientY - y.value;
-        isDragging.value = true;
-
-        const cleanups = [
-            useEventListener(window, "pointermove", (moveEvent) => {
-                x.value = moveEvent.clientX - originX;
-                y.value = moveEvent.clientY - originY;
-            }),
-            useEventListener(window, ["pointerup", "pointercancel"], () => {
-                isDragging.value = false;
-                stop?.();
-            })
-        ];
-
-        stop = () => {
-            cleanups.forEach((cleanup) => cleanup());
-            stop = undefined;
-        };
+    function move(moveEvent: PointerEvent) {
+        onMove(moveEvent.clientX - originX, moveEvent.clientY - originY);
     }
 
-    onScopeDispose(() => stop?.());
+    function end() {
+        stop();
+        onEnd();
+    }
 
-    return { isDragging, start, x, y };
+    function stop() {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", end);
+        window.removeEventListener("pointercancel", end);
+    }
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+
+    return stop;
 }

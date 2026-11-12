@@ -14,7 +14,7 @@ Reactive nodes powered by VueUse, all frontend-only. Getter nodes are operation 
 ## Actions
 - `reactivity/storage/set` writes a storage key; `reactivity/theme/setColorMode` changes the color mode (remembered).
 - `reactivity/browser/setFullscreen` (toggle, enter, exit), `setScrollLock` (while a modal or menu is open), `setWakeLock` (keep the screen on).
-- `reactivity/sensors/drag` moves an element by dragging: link `event/pointerdown(<handle id>)` (exec and `out_event`) to it, set two computed values from its `out_x` and `out_y`, and bind them on the element to move: `:style.transform="'translate(' + dragX + 'px, ' + dragY + 'px)'"`. It follows the pointer on the whole page, so no capture overlay is needed.
+- `reactivity/sensors/drag` moves an element by dragging: link `event/pointerdown(<handle id>)` (exec and `out_event`) to it. From its `out_move` exec, set two variables from `out_x` and `out_y`, and bind them on the element to move: `:style.transform="'translate(' + dragX + 'px, ' + dragY + 'px)'"`. `out_end` runs on release. It follows the pointer on the whole page, so no capture overlay is needed, and each drag continues from the last offset.
 - `reactivity/browser/share` (native share sheet), `notify` (system notification, asks permission), `speak` (text to speech, continues when finished), `vibrate` (Android only), `pickColor` (eye dropper, Chromium only).
 - Fullscreen, share and pick color must run from a user action such as a click.
 
